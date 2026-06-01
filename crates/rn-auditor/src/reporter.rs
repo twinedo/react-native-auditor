@@ -43,6 +43,7 @@ fn print_lockfiles(scan: &ProjectScan) {
     println!();
     println!("Package manager:");
     println!("  {}", scan.package_manager.label());
+    println!("Project type: {}", scan.project_type.label());
 }
 
 fn print_issues(issues: &[Issue]) {

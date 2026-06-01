@@ -1,4 +1,5 @@
 mod issue;
+mod package_json;
 mod reporter;
 mod scanner;
 

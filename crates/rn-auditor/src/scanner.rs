@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::issue::{Issue, Severity};
+use crate::package_json::{PackageJson, ProjectType};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PackageManager {
@@ -52,6 +53,9 @@ pub struct ProjectScan {
     pub has_metro_config_js: bool,
 
     pub package_manager: PackageManager,
+
+    pub project_type: ProjectType,
+    pub package_json_error: Option<String>,
 }
 
 impl ProjectScan {
@@ -104,6 +108,20 @@ impl ProjectScan {
             has_bun_lockb,
         );
 
+        let package_json_path = root.join("package.json");
+
+        let (package_json_error, project_type) = if package_json_path.exists() {
+            match PackageJson::read_from(&package_json_path) {
+                Ok(package_json) => {
+                    let project_type = package_json.detect_project_type();
+                    (None, project_type)
+                }
+                Err(error) => (Some(error), ProjectType::Unknown),
+            }
+        } else {
+            (None, ProjectType::Unknown)
+        };
+
         Self {
             root,
             has_package_json,
@@ -117,6 +135,8 @@ impl ProjectScan {
             has_babel_config_js,
             has_metro_config_js,
             package_manager,
+            package_json_error,
+            project_type,
         }
     }
 
@@ -151,6 +171,16 @@ impl ProjectScan {
                 "A .env file exists, but .env.example was not found. Teams and CI environments may miss required environment variables.",
                 Some(self.root.join(".env.example")),
             ));
+        }
+
+        if let Some(error) = &self.package_json_error {
+            issues.push(Issue {
+                code: "RNA_PACKAGE_001".to_string(),
+                title: "Invalid package.json".to_string(),
+                severity: Severity::Error,
+                message: error.to_string(),
+                file_path: Some(self.root.join("package.json")),
+            });
         }
 
         issues
