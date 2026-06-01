@@ -29,16 +29,20 @@ fn print_detected_files(scan: &ProjectScan) {
 }
 
 fn print_lockfiles(scan: &ProjectScan) {
+    println!();
     println!("Detected lockfiles:");
 
     if scan.lockfiles.is_empty() {
         println!("  none");
-        return;
+    } else {
+        for lockfile in &scan.lockfiles {
+            println!("  {}", lockfile.display());
+        }
     }
 
-    for lockfile in &scan.lockfiles {
-        println!("  {}", lockfile.display());
-    }
+    println!();
+    println!("Package manager:");
+    println!("  {}", scan.package_manager.label());
 }
 
 fn print_issues(issues: &[Issue]) {
