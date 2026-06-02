@@ -6,9 +6,9 @@ mod scanner;
 use clap::{Parser, Subcommand};
 use reporter::print_terminal_report;
 use scanner::ProjectScan;
-use std::env;
+use std::{env, path::PathBuf, process};
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(name = "rn-auditor")]
 #[command(version)]
 #[command(about = "React Native Auditor")]
@@ -20,23 +20,52 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 enum Commands {
-    Audit,
-    Scan,
+    Audit { path: Option<PathBuf> },
+    Scan { path: Option<PathBuf> },
 }
 
 fn main() {
     let cli = Cli::parse();
 
-    match cli.command {
-        Commands::Audit | Commands::Scan => {
-            let current_dir = env::current_dir().expect("Failed to read current directory");
+    let result = match cli.command {
+        Commands::Audit { path } | Commands::Scan { path } => run_audit(path),
+    };
 
-            let scan = ProjectScan::scan(&current_dir);
-            let issues = scan.issues();
-
-            print_terminal_report(&scan, &issues);
-        }
+    if let Err(error) = result {
+        eprintln!("Error: {error}");
+        process::exit(1);
     }
+}
+fn run_audit(path: Option<PathBuf>) -> Result<(), String> {
+    let project_path = resolve_project_path(path)?;
+
+    let scan = ProjectScan::scan(&project_path);
+    let issues = scan.issues();
+
+    print_terminal_report(&scan, &issues);
+
+    Ok(())
+}
+
+fn resolve_project_path(path: Option<PathBuf>) -> Result<PathBuf, String> {
+    let project_path = match path {
+        Some(path) => path,
+        None => env::current_dir()
+            .map_err(|error| format!("Failed to read current directory: {error}"))?,
+    };
+
+    if !project_path.exists() {
+        return Err(format!("Path does not exist: {}", project_path.display()));
+    }
+
+    if !project_path.is_dir() {
+        return Err(format!(
+            "Path is not a directory: {}",
+            project_path.display()
+        ));
+    }
+
+    Ok(project_path)
 }
