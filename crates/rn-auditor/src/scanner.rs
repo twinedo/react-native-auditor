@@ -10,7 +10,7 @@ pub enum PackageManager {
     Pnpm,
     Bun,
     Unknown,
-    Multiple(Vec<PackageManager>),
+    Multiple,
 }
 
 impl PackageManager {
@@ -21,15 +21,7 @@ impl PackageManager {
             PackageManager::Pnpm => "pnpm".to_string(),
             PackageManager::Bun => "Bun".to_string(),
             PackageManager::Unknown => "Unknown".to_string(),
-            PackageManager::Multiple(managers) => {
-                let labels = managers
-                    .iter()
-                    .map(|manager| manager.label())
-                    .collect::<Vec<_>>()
-                    .join(", ");
-
-                format!("Multiple ({labels})")
-            }
+            PackageManager::Multiple => "Multiple / Ambiguous".to_string(),
         }
     }
 }
@@ -100,13 +92,7 @@ impl ProjectScan {
         )
         .collect::<Vec<_>>();
 
-        let package_manager = detect_package_manager(
-            has_yarn_lock,
-            has_package_lock,
-            has_pnpm_lock,
-            has_bun_lock,
-            has_bun_lockb,
-        );
+        let package_manager = detect_package_manager(&lockfiles);
 
         let package_json_path = root.join("package.json");
 
@@ -155,10 +141,10 @@ impl ProjectScan {
 
         if self.lockfiles.len() > 1 {
             issues.push(Issue::new(
-                "RNA_LOCK_001",
+                "RNA_LOCKFILE_001",
                 "Multiple lockfiles detected",
                 Severity::Warning,
-                "Multiple package manager lockfiles were found. This can cause inconsistent installs across local machines and CI.",
+                "Multiple package manager lockfiles were found. This can cause dependency installs to differ between local machines and CI.",
                 None,
             ));
         }
@@ -187,34 +173,19 @@ impl ProjectScan {
     }
 }
 
-fn detect_package_manager(
-    has_yarn_lock: bool,
-    has_package_lock: bool,
-    has_pnpm_lock: bool,
-    has_bun_lock: bool,
-    has_bun_lockb: bool,
-) -> PackageManager {
-    let mut managers = Vec::new();
-
-    if has_yarn_lock {
-        managers.push(PackageManager::Yarn);
-    }
-
-    if has_package_lock {
-        managers.push(PackageManager::Npm);
-    }
-
-    if has_pnpm_lock {
-        managers.push(PackageManager::Pnpm);
-    }
-
-    if has_bun_lock || has_bun_lockb {
-        managers.push(PackageManager::Bun);
-    }
-
-    match managers.len() {
+fn detect_package_manager(lockfiles: &[PathBuf]) -> PackageManager {
+    match lockfiles.len() {
         0 => PackageManager::Unknown,
-        1 => managers[0].clone(),
-        _ => PackageManager::Multiple(managers),
+        1 => match lockfiles[0]
+            .file_name()
+            .and_then(|file_name| file_name.to_str())
+        {
+            Some("yarn.lock") => PackageManager::Yarn,
+            Some("package-lock.json") => PackageManager::Npm,
+            Some("pnpm-lock.yaml") => PackageManager::Pnpm,
+            Some("bun.lock" | "bun.lockb") => PackageManager::Bun,
+            _ => PackageManager::Unknown,
+        },
+        _ => PackageManager::Multiple,
     }
 }
