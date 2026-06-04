@@ -184,8 +184,28 @@ impl ProjectScan {
             });
         }
 
-        if let Some(app_json) = &self.app_json {
-            let _ = (app_json.ios_bundle_identifier(), app_json.android_package());
+        if matches!(self.project_type, ProjectType::Expo) {
+            if let Some(app_json) = &self.app_json {
+                if is_missing_string(app_json.ios_bundle_identifier()) {
+                    issues.push(Issue::new(
+                        "RNA_EXPO_IOS_001",
+                        "Missing iOS bundle identifier",
+                        Severity::Warning,
+                        "expo.ios.bundleIdentifier is missing or empty. This field is important for iOS release and build identity.",
+                        Some(self.root.join("app.json")),
+                    ));
+                }
+
+                if is_missing_string(app_json.android_package()) {
+                    issues.push(Issue::new(
+                        "RNA_EXPO_ANDROID_001",
+                        "Missing Android package name",
+                        Severity::Warning,
+                        "expo.android.package is missing or empty. This field is important for Android release and build identity.",
+                        Some(self.root.join("app.json")),
+                    ));
+                }
+            }
         }
 
         if self.app_json_error.is_some() {
@@ -217,4 +237,8 @@ fn detect_package_manager(lockfiles: &[PathBuf]) -> PackageManager {
         },
         _ => PackageManager::Multiple,
     }
+}
+
+fn is_missing_string(value: Option<&str>) -> bool {
+    value.is_none_or(|value| value.trim().is_empty())
 }
