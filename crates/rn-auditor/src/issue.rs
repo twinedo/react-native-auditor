@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Severity {
+    Info,
     Warning,
     Error,
 }

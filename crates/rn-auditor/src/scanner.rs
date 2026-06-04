@@ -174,6 +174,16 @@ impl ProjectScan {
             ));
         }
 
+        if let Some(app_config_path) = self.dynamic_app_config_path() {
+            issues.push(Issue::new(
+                "RNA_EXPO_CONFIG_001",
+                "Dynamic Expo config detected",
+                Severity::Info,
+                "React Native Auditor detected a dynamic Expo config. JS/TS config files are not executed for security, so some static Expo checks may be limited or skipped.",
+                Some(app_config_path),
+            ));
+        }
+
         if let Some(error) = &self.package_json_error {
             issues.push(Issue {
                 code: "RNA_PACKAGE_001".to_string(),
@@ -219,6 +229,16 @@ impl ProjectScan {
         }
 
         issues
+    }
+
+    fn dynamic_app_config_path(&self) -> Option<PathBuf> {
+        if self.has_app_config_js {
+            Some(self.root.join("app.config.js"))
+        } else if self.has_app_config_ts {
+            Some(self.root.join("app.config.ts"))
+        } else {
+            None
+        }
     }
 }
 
