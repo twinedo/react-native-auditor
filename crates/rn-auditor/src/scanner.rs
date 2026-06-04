@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::app_json::AppJson;
+use crate::eas_json::EasJson;
 use crate::issue::{Issue, Severity};
 use crate::package_json::{PackageJson, ProjectType};
 
@@ -50,6 +51,7 @@ pub struct ProjectScan {
     pub project_type: ProjectType,
     pub app_json: Option<AppJson>,
     pub app_json_error: Option<String>,
+    pub eas_json_error: Option<String>,
     pub package_json_error: Option<String>,
 }
 
@@ -107,6 +109,20 @@ impl ProjectScan {
             (None, None)
         };
 
+        let eas_json_path = root.join("eas.json");
+        let eas_json_error = if eas_json_path.exists() {
+            match EasJson::read_from(&eas_json_path) {
+                Ok(eas_json) => {
+                    let _ = eas_json.build_production();
+                    let _ = eas_json.submit_production();
+                    None
+                }
+                Err(error) => Some(error),
+            }
+        } else {
+            None
+        };
+
         let package_json_path = root.join("package.json");
 
         let (package_json_error, project_type) = if package_json_path.exists() {
@@ -136,6 +152,7 @@ impl ProjectScan {
             package_manager,
             app_json,
             app_json_error,
+            eas_json_error,
             package_json_error,
             project_type,
         }
@@ -225,6 +242,16 @@ impl ProjectScan {
                 Severity::Warning,
                 "app.json could not be parsed as valid JSON, so some static Expo config checks may not be able to run.",
                 Some(self.root.join("app.json")),
+            ));
+        }
+
+        if self.eas_json_error.is_some() {
+            issues.push(Issue::new(
+                "RNA_EAS_JSON_001",
+                "Invalid eas.json",
+                Severity::Warning,
+                "eas.json could not be parsed as valid JSON, so some EAS release-readiness checks may not be able to run.",
+                Some(self.root.join("eas.json")),
             ));
         }
 
