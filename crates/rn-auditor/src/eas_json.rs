@@ -6,9 +6,6 @@ use std::path::Path;
 pub struct EasJson {
     #[serde(default)]
     build: Option<EasProfiles>,
-
-    #[serde(default)]
-    submit: Option<EasProfiles>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -30,11 +27,5 @@ impl EasJson {
         self.build
             .as_ref()
             .and_then(|build| build.production.as_ref())
-    }
-
-    pub fn submit_production(&self) -> Option<&serde_json::Value> {
-        self.submit
-            .as_ref()
-            .and_then(|submit| submit.production.as_ref())
     }
 }

@@ -50,6 +50,7 @@ pub struct ProjectScan {
 
     pub project_type: ProjectType,
     pub app_json: Option<AppJson>,
+    pub eas_json: Option<EasJson>,
     pub app_json_error: Option<String>,
     pub eas_json_error: Option<String>,
     pub package_json_error: Option<String>,
@@ -110,17 +111,13 @@ impl ProjectScan {
         };
 
         let eas_json_path = root.join("eas.json");
-        let eas_json_error = if eas_json_path.exists() {
+        let (eas_json, eas_json_error) = if eas_json_path.exists() {
             match EasJson::read_from(&eas_json_path) {
-                Ok(eas_json) => {
-                    let _ = eas_json.build_production();
-                    let _ = eas_json.submit_production();
-                    None
-                }
-                Err(error) => Some(error),
+                Ok(eas_json) => (Some(eas_json), None),
+                Err(error) => (None, Some(error)),
             }
         } else {
-            None
+            (None, None)
         };
 
         let package_json_path = root.join("package.json");
@@ -151,6 +148,7 @@ impl ProjectScan {
             has_metro_config_js,
             package_manager,
             app_json,
+            eas_json,
             app_json_error,
             eas_json_error,
             package_json_error,
@@ -232,6 +230,29 @@ impl ProjectScan {
                         Some(self.root.join("app.json")),
                     ));
                 }
+            }
+
+            if !self.has_eas_json {
+                issues.push(Issue::new(
+                    "RNA_EAS_001",
+                    "Missing eas.json",
+                    Severity::Warning,
+                    "Expo release builds usually need eas.json to configure EAS build and submit behavior for releases.",
+                    Some(self.root.join("eas.json")),
+                ));
+            } else if self.eas_json_error.is_none()
+                && self
+                    .eas_json
+                    .as_ref()
+                    .is_some_and(|eas_json| eas_json.build_production().is_none())
+            {
+                issues.push(Issue::new(
+                    "RNA_EAS_002",
+                    "Missing EAS production build profile",
+                    Severity::Warning,
+                    "build.production is important for release readiness and keeping CI and release builds consistent.",
+                    Some(self.root.join("eas.json")),
+                ));
             }
         }
 
