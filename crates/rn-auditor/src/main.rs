@@ -1,3 +1,4 @@
+mod app_json;
 mod issue;
 mod package_json;
 mod reporter;

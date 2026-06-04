@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use crate::app_json::AppJson;
 use crate::issue::{Issue, Severity};
 use crate::package_json::{PackageJson, ProjectType};
 
@@ -47,6 +48,8 @@ pub struct ProjectScan {
     pub package_manager: PackageManager,
 
     pub project_type: ProjectType,
+    pub app_json: Option<AppJson>,
+    pub app_json_error: Option<String>,
     pub package_json_error: Option<String>,
 }
 
@@ -94,6 +97,16 @@ impl ProjectScan {
 
         let package_manager = detect_package_manager(&lockfiles);
 
+        let app_json_path = root.join("app.json");
+        let (app_json, app_json_error) = if app_json_path.exists() {
+            match AppJson::read_from(&app_json_path) {
+                Ok(app_json) => (Some(app_json), None),
+                Err(error) => (None, Some(error)),
+            }
+        } else {
+            (None, None)
+        };
+
         let package_json_path = root.join("package.json");
 
         let (package_json_error, project_type) = if package_json_path.exists() {
@@ -121,6 +134,8 @@ impl ProjectScan {
             has_babel_config_js,
             has_metro_config_js,
             package_manager,
+            app_json,
+            app_json_error,
             package_json_error,
             project_type,
         }
@@ -154,7 +169,7 @@ impl ProjectScan {
                 "RNA_ENV_001",
                 "Missing .env.example",
                 Severity::Warning,
-                "A .env file exists, but .env.example was not found. Teams and CI environments may miss required environment variables.",
+                "This project uses a .env file but does not provide a .env.example file to document required environment variables.",
                 Some(self.root.join(".env.example")),
             ));
         }
@@ -167,6 +182,20 @@ impl ProjectScan {
                 message: error.to_string(),
                 file_path: Some(self.root.join("package.json")),
             });
+        }
+
+        if let Some(app_json) = &self.app_json {
+            let _ = (app_json.ios_bundle_identifier(), app_json.android_package());
+        }
+
+        if self.app_json_error.is_some() {
+            issues.push(Issue::new(
+                "RNA_APP_JSON_001",
+                "Invalid app.json",
+                Severity::Warning,
+                "app.json could not be parsed as valid JSON, so some static Expo config checks may not be able to run.",
+                Some(self.root.join("app.json")),
+            ));
         }
 
         issues
