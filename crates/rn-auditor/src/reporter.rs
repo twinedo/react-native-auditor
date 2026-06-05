@@ -3,7 +3,13 @@ use crate::scanner::ProjectScan;
 
 pub fn print_terminal_report(scan: &ProjectScan, issues: &[Issue]) {
     println!("React Native Auditor");
-    println!("Scanning: {}", scan.root.display());
+    println!();
+
+    print_section_header("Scanning path");
+    println!("  {}", scan.root.display());
+    println!();
+
+    print_project_summary(scan);
     println!();
 
     print_detected_files(scan);
@@ -15,8 +21,14 @@ pub fn print_terminal_report(scan: &ProjectScan, issues: &[Issue]) {
     print_issues(issues);
 }
 
+fn print_project_summary(scan: &ProjectScan) {
+    print_section_header("Project summary");
+    println!("  Project type: {}", scan.project_type.label());
+    println!("  Package manager: {}", scan.package_manager.label());
+}
+
 fn print_detected_files(scan: &ProjectScan) {
-    println!("Detected files:");
+    print_section_header("Detected files");
     println!("  package.json: {}", yes_no(scan.has_package_json));
     println!("  app.json: {}", yes_no(scan.has_app_json));
     println!("  app.config.js: {}", yes_no(scan.has_app_config_js));
@@ -29,8 +41,7 @@ fn print_detected_files(scan: &ProjectScan) {
 }
 
 fn print_lockfiles(scan: &ProjectScan) {
-    println!();
-    println!("Detected lockfiles:");
+    print_section_header("Detected lockfiles");
 
     if scan.lockfiles.is_empty() {
         println!("  none");
@@ -39,14 +50,10 @@ fn print_lockfiles(scan: &ProjectScan) {
             println!("  {}", lockfile.display());
         }
     }
-
-    println!();
-    println!("Package manager: {}", scan.package_manager.label());
-    println!("Project type: {}", scan.project_type.label());
 }
 
 fn print_issues(issues: &[Issue]) {
-    println!("Issues:");
+    print_section_header("Issues");
 
     if issues.is_empty() {
         println!("  No issues found.");
@@ -62,6 +69,10 @@ fn print_issues(issues: &[Issue]) {
             println!("      File: {}", path.display());
         }
     }
+}
+
+fn print_section_header(title: &str) {
+    println!("{title}:");
 }
 
 fn yes_no(value: bool) -> &'static str {
