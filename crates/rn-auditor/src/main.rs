@@ -1,6 +1,7 @@
 mod issue;
 mod parsers;
 mod reporter;
+mod rules;
 mod scanner;
 
 use clap::{Parser, Subcommand};

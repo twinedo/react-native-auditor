@@ -1,10 +1,10 @@
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::issue::{Issue, Severity};
 use crate::parsers::app_json::AppJson;
 use crate::parsers::eas_json::EasJson;
 use crate::parsers::package_json::{PackageJson, ProjectType};
+use crate::rules::{app_config, eas, env, lockfiles, reanimated};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PackageManager {
@@ -172,34 +172,22 @@ impl ProjectScan {
             ));
         }
 
-        if self.lockfiles.len() > 1 {
-            issues.push(Issue::new(
-                "RNA_LOCKFILE_001",
-                "Multiple lockfiles detected",
-                Severity::Warning,
-                "Multiple package manager lockfiles were found. This can cause dependency installs to differ between local machines and CI.",
-                None,
-            ));
+        if let Some(issue) = lockfiles::multiple_lockfiles_issue(&self.lockfiles) {
+            issues.push(issue);
         }
 
-        if self.has_env && !self.has_env_example {
-            issues.push(Issue::new(
-                "RNA_ENV_001",
-                "Missing .env.example",
-                Severity::Warning,
-                "This project uses a .env file but does not provide a .env.example file to document required environment variables.",
-                Some(self.root.join(".env.example")),
-            ));
+        if let Some(issue) =
+            env::missing_env_example_issue(&self.root, self.has_env, self.has_env_example)
+        {
+            issues.push(issue);
         }
 
-        if let Some(app_config_path) = self.dynamic_app_config_path() {
-            issues.push(Issue::new(
-                "RNA_EXPO_CONFIG_001",
-                "Dynamic Expo config detected",
-                Severity::Info,
-                "React Native Auditor detected a dynamic Expo config. JS/TS config files are not executed for security, so some static Expo checks may be limited or skipped.",
-                Some(app_config_path),
-            ));
+        if let Some(issue) = app_config::dynamic_app_config_issue(
+            &self.root,
+            self.has_app_config_js,
+            self.has_app_config_ts,
+        ) {
+            issues.push(issue);
         }
 
         if let Some(error) = &self.package_json_error {
@@ -212,18 +200,12 @@ impl ProjectScan {
             });
         }
 
-        if self
-            .package_json
-            .as_ref()
-            .is_some_and(|package_json| package_json.has_dependency("react-native-reanimated"))
-        {
-            let babel_config_path = self.root.join("babel.config.js");
-
-            if !self.has_babel_config_js
-                || !babel_config_contains_reanimated_plugin(&babel_config_path)
-            {
-                issues.push(missing_reanimated_babel_plugin_issue(babel_config_path));
-            }
+        if let Some(issue) = reanimated::babel_setup_issue(
+            &self.root,
+            self.package_json.as_ref(),
+            self.has_babel_config_js,
+        ) {
+            issues.push(issue);
         }
 
         if matches!(self.project_type, ProjectType::Expo) {
@@ -248,30 +230,15 @@ impl ProjectScan {
                     ));
                 }
             }
-
-            if !self.has_eas_json {
-                issues.push(Issue::new(
-                    "RNA_EAS_001",
-                    "Missing eas.json",
-                    Severity::Warning,
-                    "Expo release builds usually need eas.json to configure EAS build and submit behavior for releases.",
-                    Some(self.root.join("eas.json")),
-                ));
-            } else if self.eas_json_error.is_none()
-                && self
-                    .eas_json
-                    .as_ref()
-                    .is_some_and(|eas_json| eas_json.build_production().is_none())
-            {
-                issues.push(Issue::new(
-                    "RNA_EAS_002",
-                    "Missing EAS production build profile",
-                    Severity::Warning,
-                    "build.production is important for release readiness and keeping CI and release builds consistent.",
-                    Some(self.root.join("eas.json")),
-                ));
-            }
         }
+
+        issues.extend(eas::release_readiness_issues(
+            &self.root,
+            matches!(self.project_type, ProjectType::Expo),
+            self.has_eas_json,
+            self.eas_json_error.as_ref(),
+            self.eas_json.as_ref(),
+        ));
 
         if self.app_json_error.is_some() {
             issues.push(Issue::new(
@@ -295,16 +262,6 @@ impl ProjectScan {
 
         issues
     }
-
-    fn dynamic_app_config_path(&self) -> Option<PathBuf> {
-        if self.has_app_config_js {
-            Some(self.root.join("app.config.js"))
-        } else if self.has_app_config_ts {
-            Some(self.root.join("app.config.ts"))
-        } else {
-            None
-        }
-    }
 }
 
 fn detect_package_manager(lockfiles: &[PathBuf]) -> PackageManager {
@@ -326,18 +283,4 @@ fn detect_package_manager(lockfiles: &[PathBuf]) -> PackageManager {
 
 fn is_missing_string(value: Option<&str>) -> bool {
     value.is_none_or(|value| value.trim().is_empty())
-}
-
-fn babel_config_contains_reanimated_plugin(path: &Path) -> bool {
-    fs::read_to_string(path).is_ok_and(|content| content.contains("react-native-reanimated/plugin"))
-}
-
-fn missing_reanimated_babel_plugin_issue(file_path: PathBuf) -> Issue {
-    Issue::new(
-        "RNA_REANIMATED_001",
-        "Missing Reanimated Babel plugin",
-        Severity::Warning,
-        "react-native-reanimated usually requires the Babel plugin react-native-reanimated/plugin so React Native and Reanimated setup works correctly.",
-        Some(file_path),
-    )
 }
