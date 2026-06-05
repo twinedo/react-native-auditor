@@ -8,5 +8,7 @@
 
 .local/*
 
-npm/react-native-auditor/vendor/*
-!npm/react-native-auditor/vendor/.gitkeep
+npm/react-native-auditor/vendor/**
+!npm/react-native-auditor/vendor/**/
+!npm/react-native-auditor/vendor/**/.gitkeep
+npm/react-native-auditor/*.tgz

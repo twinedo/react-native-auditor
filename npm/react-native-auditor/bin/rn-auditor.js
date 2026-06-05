@@ -5,41 +5,42 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
+const { getPlatformBinary, supportedPlatformKeys } = require("./platform");
 
 const args = process.argv.slice(2);
 const vendorDirectory = path.resolve(__dirname, "..", "vendor");
+const platformBinary = getPlatformBinary();
 
-const platformBinaryPaths = {
-  "darwin-arm64": path.join(vendorDirectory, "darwin-arm64", "rn-auditor"),
-  "darwin-x64": path.join(vendorDirectory, "darwin-x64", "rn-auditor"),
-  "linux-x64": path.join(vendorDirectory, "linux-x64", "rn-auditor"),
-  "win32-x64": path.join(vendorDirectory, "win32-x64", "rn-auditor.exe"),
-};
-
-const platformKey = `${process.platform}-${process.arch}`;
-const binaryCandidates = [
-  platformBinaryPaths[platformKey],
-  path.join(
-    vendorDirectory,
-    process.platform === "win32" ? "rn-auditor.exe" : "rn-auditor",
-  ),
-].filter(Boolean);
-
-const binaryPath = binaryCandidates.find((candidate) => fs.existsSync(candidate));
-
-if (!binaryPath) {
+if (!platformBinary) {
   console.error(
     [
-      "React Native Auditor npm wrapper is installed, but its native rn-auditor binary is missing.",
-      `Expected a bundled binary for ${platformKey} under:`,
-      `  ${vendorDirectory}`,
+      `React Native Auditor does not support ${process.platform}-${process.arch}.`,
+      `Supported platforms: ${supportedPlatformKeys.join(", ")}.`,
       "",
-      "This npm package skeleton is not ready for published npm use until native binaries are bundled.",
-      "The wrapper will not download a binary, run Cargo, or build anything automatically.",
+      "The npm wrapper only executes a bundled Rust binary.",
+      "It will not download a binary, run Cargo, or build anything automatically.",
     ].join("\n"),
   );
   process.exitCode = 1;
 } else {
+  const binaryPath = path.join(vendorDirectory, platformBinary.relativePath);
+
+  if (!fs.existsSync(binaryPath)) {
+    console.error(
+      [
+        `The bundled rn-auditor binary for ${platformBinary.platformKey} is missing.`,
+        `Expected binary: ${binaryPath}`,
+        "",
+        "For local packaging from the repository checkout, build the Rust release binary and run:",
+        "  node scripts/prepare-local-binary.js",
+        "",
+        "The npm wrapper will not fall back to Cargo, download a binary, or build automatically.",
+      ].join("\n"),
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   const child = spawn(binaryPath, args, { stdio: "inherit" });
 
   child.on("error", (error) => {
@@ -49,8 +50,7 @@ if (!binaryPath) {
 
   child.on("exit", (code, signal) => {
     if (signal) {
-      console.error(`The bundled rn-auditor binary exited due to signal ${signal}.`);
-      process.exitCode = 1;
+      process.kill(process.pid, signal);
       return;
     }
 
