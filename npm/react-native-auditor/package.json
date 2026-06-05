@@ -1,0 +1,31 @@
+{
+  "name": "react-native-auditor",
+  "version": "0.1.0",
+  "description": "A local-first React Native & Expo project auditor for release readiness, dependency health, and risk reports.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/twinedo/react-native-auditor.git"
+  },
+  "bin": {
+    "rn-auditor": "bin/rn-auditor.js"
+  },
+  "files": [
+    "bin",
+    "vendor",
+    "README.md",
+    "package.json"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "cli",
+    "audit",
+    "auditor",
+    "release-readiness",
+    "dependency-health"
+  ]
+}

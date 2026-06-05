@@ -45,6 +45,9 @@ cargo run -p react-native-auditor -- audit /path/to/project
 
 ### Planned npm usage
 
+An unpublished npm wrapper skeleton now lives in `npm/react-native-auditor` for local
+packaging and launcher tests. It does not yet include release binaries.
+
 Once npm distribution is available, the intended usage will be:
 
 ```bash
