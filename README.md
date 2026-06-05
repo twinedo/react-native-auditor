@@ -28,32 +28,28 @@ It is also not a SaaS dashboard, cloud service, command runner, automatic fixer,
 
 ## Installation and usage
 
-The npm package is not published yet. Once v0.1 is available on npm, the supported installation paths will be:
+The npm package is not published yet. For now, use React Native Auditor from source.
 
-### Quick run
-
-```bash
-npx react-native-auditor audit
-```
-
-### Global install
-
-```bash
-npm install -g react-native-auditor
-rn-auditor audit
-```
-
-### Project install
-
-```bash
-yarn add -D react-native-auditor
-yarn rn-auditor audit
-```
-
-To use the current repository before the npm release, install the Rust binary from the repository root:
+### Install from source
 
 ```bash
 cargo install --path crates/rn-auditor
+rn-auditor audit /path/to/project
+```
+
+Or run it directly from a cloned repository:
+
+```bash
+cargo run -p react-native-auditor -- audit /path/to/project
+```
+
+### Planned npm usage
+
+Once npm distribution is available, the intended usage will be:
+
+```bash
+npx react-native-auditor audit
+npm install -g react-native-auditor
 rn-auditor audit
 ```
 
@@ -188,8 +184,8 @@ Small, focused rules are preferred over broad frameworks. Useful rule categories
 v1 intentionally avoids a plugin system. Keep changes reviewable, avoid executing target project code, and run the Rust checks before submitting:
 
 ```bash
-cargo fmt --check
-cargo check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test
+cargo fmt --all -- --check
+cargo check --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
 ```
