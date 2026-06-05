@@ -1,11 +1,11 @@
 mod issue;
 mod parsers;
-mod reporter;
+mod reporters;
 mod rules;
 mod scanner;
 
 use clap::{Parser, Subcommand};
-use reporter::print_terminal_report;
+use reporters::print_terminal_report;
 use scanner::ProjectScan;
 use std::{env, path::PathBuf, process};
 
