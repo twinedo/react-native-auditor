@@ -1,7 +1,5 @@
-mod app_json;
-mod eas_json;
 mod issue;
-mod package_json;
+mod parsers;
 mod reporter;
 mod scanner;
 

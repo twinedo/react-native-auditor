@@ -1,10 +1,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::app_json::AppJson;
-use crate::eas_json::EasJson;
 use crate::issue::{Issue, Severity};
-use crate::package_json::{PackageJson, ProjectType};
+use crate::parsers::app_json::AppJson;
+use crate::parsers::eas_json::EasJson;
+use crate::parsers::package_json::{PackageJson, ProjectType};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PackageManager {
