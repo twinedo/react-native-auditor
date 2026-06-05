@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::app_json::AppJson;
@@ -49,6 +50,7 @@ pub struct ProjectScan {
     pub package_manager: PackageManager,
 
     pub project_type: ProjectType,
+    pub package_json: Option<PackageJson>,
     pub app_json: Option<AppJson>,
     pub eas_json: Option<EasJson>,
     pub app_json_error: Option<String>,
@@ -122,16 +124,16 @@ impl ProjectScan {
 
         let package_json_path = root.join("package.json");
 
-        let (package_json_error, project_type) = if package_json_path.exists() {
+        let (package_json, package_json_error, project_type) = if package_json_path.exists() {
             match PackageJson::read_from(&package_json_path) {
                 Ok(package_json) => {
                     let project_type = package_json.detect_project_type();
-                    (None, project_type)
+                    (Some(package_json), None, project_type)
                 }
-                Err(error) => (Some(error), ProjectType::Unknown),
+                Err(error) => (None, Some(error), ProjectType::Unknown),
             }
         } else {
-            (None, ProjectType::Unknown)
+            (None, None, ProjectType::Unknown)
         };
 
         Self {
@@ -147,6 +149,7 @@ impl ProjectScan {
             has_babel_config_js,
             has_metro_config_js,
             package_manager,
+            package_json,
             app_json,
             eas_json,
             app_json_error,
@@ -207,6 +210,20 @@ impl ProjectScan {
                 message: error.to_string(),
                 file_path: Some(self.root.join("package.json")),
             });
+        }
+
+        if self
+            .package_json
+            .as_ref()
+            .is_some_and(|package_json| package_json.has_dependency("react-native-reanimated"))
+        {
+            let babel_config_path = self.root.join("babel.config.js");
+
+            if !self.has_babel_config_js
+                || !babel_config_contains_reanimated_plugin(&babel_config_path)
+            {
+                issues.push(missing_reanimated_babel_plugin_issue(babel_config_path));
+            }
         }
 
         if matches!(self.project_type, ProjectType::Expo) {
@@ -309,4 +326,18 @@ fn detect_package_manager(lockfiles: &[PathBuf]) -> PackageManager {
 
 fn is_missing_string(value: Option<&str>) -> bool {
     value.is_none_or(|value| value.trim().is_empty())
+}
+
+fn babel_config_contains_reanimated_plugin(path: &Path) -> bool {
+    fs::read_to_string(path).is_ok_and(|content| content.contains("react-native-reanimated/plugin"))
+}
+
+fn missing_reanimated_babel_plugin_issue(file_path: PathBuf) -> Issue {
+    Issue::new(
+        "RNA_REANIMATED_001",
+        "Missing Reanimated Babel plugin",
+        Severity::Warning,
+        "react-native-reanimated usually requires the Babel plugin react-native-reanimated/plugin so React Native and Reanimated setup works correctly.",
+        Some(file_path),
+    )
 }
