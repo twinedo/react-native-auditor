@@ -23,16 +23,12 @@ From the repository root, build the release binary:
 cargo build -p react-native-auditor --release
 ```
 
-Then prepare and test the npm package:
+Then prepare the current platform binary and run the launcher directly:
 
 ```bash
 cd npm/react-native-auditor
 node scripts/prepare-local-binary.js
 node bin/rn-auditor.js audit /path/to/project
-npm pack
-npm install -g ./react-native-auditor-0.1.0.tgz
-rn-auditor audit /path/to/project
-npm uninstall -g react-native-auditor
 ```
 
 The helper only copies the current platform's existing binary from `target/release`. It does not
@@ -51,15 +47,45 @@ publish to npm or create a GitHub Release.
    - `rn-auditor-linux-x64`
    - `rn-auditor-win32-x64`
 3. Extract the artifacts into a local folder, for example `dist-artifacts/` at the repository root.
-4. Prepare the npm vendor layout and create the package:
+4. Prepare the npm vendor layout:
 
 ```bash
 cd npm/react-native-auditor
 node scripts/prepare-artifact-binaries.js ../../dist-artifacts
-npm pack
 ```
 
-5. Test the generated tarball:
+## Final prepublish validation
+
+This is a manual prepublish validation workflow. It checks the package but does not publish it,
+create a GitHub Release, tag a release, or upload artifacts.
+
+After preparing all four platform binaries with `prepare-artifact-binaries.js`, run:
+
+```bash
+node scripts/check-package.js
+npm pack --dry-run
+npm pack
+npm install -g ./react-native-auditor-0.1.0.tgz
+rn-auditor audit ../../
+npm uninstall -g react-native-auditor
+```
+
+`npm run check:package` is an alias for `node scripts/check-package.js`. The checker validates the
+package metadata, launcher permissions and shebang, required platform binaries, and the JSON output
+from `npm pack --dry-run`. It fails if required runtime files would be omitted or if local scripts,
+tarballs, `dist-artifacts`, `target`, or `.local` content would be included.
+
+The published tarball is intentionally limited by `package.json` to:
+
+- `bin/`
+- `vendor/`
+- `README.md`
+- `package.json`
+
+The local `scripts/` directory remains in the repository for package preparation and validation,
+but is not included in the tarball.
+
+To test the generated tarball manually:
 
 ```bash
 npm install -g ./react-native-auditor-0.1.0.tgz
