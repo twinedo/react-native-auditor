@@ -1,97 +1,74 @@
+<div align="center">
+
 # React Native Auditor
 
-A local-first React Native & Expo project auditor for release readiness, dependency health, and risk reports.
+**A local-first React Native & Expo project auditor for release readiness, dependency health, and risk reports.**
 
-React Native Auditor (`react-native-auditor`) is a rule-based CLI for finding project-level configuration, dependency setup, and release-readiness risks. The CLI command is `rn-auditor`, with `rn-auditor audit` as the main command and `rn-auditor scan` as its alias.
+Audit React Native and Expo projects before release issues waste your time.
 
-## What it is
+[![npm version](https://img.shields.io/npm/v/react-native-auditor?style=flat-square)](https://www.npmjs.com/package/react-native-auditor)
+[![CI](https://img.shields.io/github/actions/workflow/status/twinedo/react-native-auditor/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/twinedo/react-native-auditor/actions/workflows/ci.yml)
+[![license](https://img.shields.io/github/license/twinedo/react-native-auditor?style=flat-square)](LICENSE)
+![platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-4c566a?style=flat-square)
 
-React Native Auditor inspects a React Native or Expo project using conservative static checks. It reports what it can determine from files such as `package.json`, `app.json`, `eas.json`, lockfiles, and selected configuration files.
+</div>
 
-The v0.1 scope is deliberately small: practical checks, clear issue codes, terminal output, and a local HTML report.
+## Quick start
 
-## What it is not
-
-React Native Auditor is not a replacement for `react-native doctor`. Doctor-style tools focus on the development environment; React Native Auditor focuses on project-level files and risks.
-
-It is also not a SaaS dashboard, cloud service, command runner, automatic fixer, or plugin platform. Those capabilities are not part of v0.1.
-
-## Current features
-
-- Detects Expo, React Native, and unknown project types.
-- Detects Yarn, npm, pnpm, Bun, unknown, and ambiguous package manager states from root lockfiles.
-- Reports configuration and release-readiness findings with issue codes.
-- Parses static JSON configuration without evaluating JavaScript or TypeScript.
-- Prints a terminal report.
-- Writes a static HTML report locally.
-- Accepts an optional project path and defaults to the current directory.
-
-## Installation and usage
-
-The npm package is not published yet. For now, use React Native Auditor from source.
-
-### Install from source
-
-```bash
-cargo install --path crates/rn-auditor
-rn-auditor audit /path/to/project
-```
-
-Or run it directly from a cloned repository:
-
-```bash
-cargo run -p react-native-auditor -- audit /path/to/project
-```
-
-### Planned npm usage
-
-An unpublished npm wrapper skeleton now lives in `npm/react-native-auditor` for local
-packaging and launcher tests. It does not yet include release binaries.
-
-Once npm distribution is available, the intended usage will be:
+Run an audit in the current project:
 
 ```bash
 npx react-native-auditor audit
+```
+
+Audit a specific project:
+
+```bash
+npx react-native-auditor audit /path/to/project
+```
+
+Or install the CLI globally:
+
+```bash
 npm install -g react-native-auditor
 rn-auditor audit
 ```
 
-### Audit another project
+`scan` is an alias for `audit`:
 
 ```bash
-rn-auditor audit /path/to/project
-rn-auditor scan /path/to/project
+rn-auditor scan
 ```
 
-### Generate an HTML report
+Generate a local HTML report:
 
 ```bash
 rn-auditor report --html
-rn-auditor report --html /path/to/project
 rn-auditor report --html /path/to/project --output report.html
 ```
 
-Without `--output`, the report is written to `rn-auditor-report.html` in the current directory.
+## What it does
 
-## Commands
+React Native Auditor uses conservative static checks to:
 
-### `rn-auditor audit [path]`
+- Detect Expo, React Native, and unknown project types.
+- Detect the package manager and conflicting root lockfiles.
+- Check Expo and EAS release-readiness configuration.
+- Find missing environment variable documentation.
+- Flag a common Reanimated and Babel setup risk.
+- Generate readable terminal output and a local static HTML report.
 
-Runs the current audit rules and prints a terminal report. If `path` is omitted, the current directory is audited.
+## Why React Native Auditor
 
-### `rn-auditor scan [path]`
+`react-native doctor` is useful for checking the development environment. React Native Auditor has a different scope: it audits project-level files for dependency, configuration, and release-readiness risks.
 
-Alias for `rn-auditor audit`.
+- **Project-focused:** inspects the repository state that travels with the app.
+- **Local-first:** project data stays on the machine running the audit.
+- **Static by default:** reads selected files without running the target project.
+- **Native CLI:** the npm package launches a bundled Rust binary for fast, predictable execution.
+- **No service dependency:** no account, dashboard, or SaaS connection is required.
 
-### `rn-auditor report --html [path] [--output <file>]`
-
-Runs the same audit and writes a local HTML report. The `--html` flag is required.
-
-The following commands and options are roadmap ideas, not available in v0.1:
-
-- `rn-auditor analyze-log`
-- `rn-auditor release-check`
-- `rn-auditor audit --fix --interactive`
+React Native Auditor is intentionally focused. It does not replace React Native Doctor, Expo Doctor, platform build validation, or a real release build.
 
 ## Example output
 
@@ -99,7 +76,7 @@ The following commands and options are roadmap ideas, not available in v0.1:
 React Native Auditor
 
 Scanning path:
-  /path/to/project
+  /work/mobile-app
 
 Project summary:
   Project type: Expo
@@ -107,84 +84,134 @@ Project summary:
 
 Issues:
   [Warning] RNA_LOCKFILE_001 - Multiple lockfiles detected
-      Multiple package manager lockfiles were found. This can cause dependency installs to differ between local machines and CI.
+      Multiple package manager lockfiles were found.
+  [Warning] RNA_ENV_001 - Missing .env.example
+      This project uses a .env file but does not document required variables.
 ```
 
-Output varies by project. The example is shortened for readability.
+Output varies by project. This example is shortened for readability.
 
 ## Checks included in v0.1
 
-### Project and package manager detection
+### Project detection
 
-- Project type: Expo, React Native, or Unknown.
-- Missing `package.json` (`RNA_PROJECT_001`).
-- Invalid `package.json` (`RNA_PACKAGE_001`).
-- Package manager: Yarn, npm, pnpm, Bun, Unknown, or Multiple / Ambiguous.
-- Multiple package manager lockfiles (`RNA_LOCKFILE_001`).
+- Detects Expo, React Native, and unknown project types from `package.json`.
+- Reports a missing or invalid `package.json`.
+- Accepts the current directory or an explicit project path.
+
+### Dependency and lockfile health
+
+- Detects npm, Yarn, pnpm, and Bun from root lockfiles.
+- Reports multiple package manager lockfiles as an ambiguous setup.
 
 ### Environment files
 
-- `.env` exists without `.env.example` (`RNA_ENV_001`).
-- Environment variable values are not parsed or printed.
+- Reports when `.env` exists but `.env.example` is missing.
+- Never parses or prints environment variable values.
 
-### Expo app configuration
+### Expo app config
 
-- Static `app.json` parsing.
-- Invalid `app.json` (`RNA_APP_JSON_001`).
-- Missing `expo.ios.bundleIdentifier` (`RNA_EXPO_IOS_001`).
-- Missing `expo.android.package` (`RNA_EXPO_ANDROID_001`).
-- Dynamic `app.config.js` or `app.config.ts` detection (`RNA_EXPO_CONFIG_001`).
+- Parses static `app.json` as JSON.
+- Checks `expo.ios.bundleIdentifier` and `expo.android.package`.
+- Detects dynamic `app.config.js` and `app.config.ts` without evaluating them.
 
-Dynamic app config is detected but not evaluated, so related static checks may be limited.
+Dynamic app config limits the static checks that can be performed.
 
-### EAS configuration
+### EAS release readiness
 
-- Static `eas.json` parsing.
-- Invalid `eas.json` (`RNA_EAS_JSON_001`).
-- Missing `eas.json` for an Expo project (`RNA_EAS_001`).
-- Missing `build.production` profile (`RNA_EAS_002`).
+- Parses static `eas.json` as JSON.
+- Reports a missing `eas.json` for Expo projects.
+- Reports a missing `build.production` profile.
 
-### Reanimated configuration
+### Reanimated setup
 
-- Warns when `react-native-reanimated` is installed but a Babel config or the expected Reanimated Babel plugin cannot be found (`RNA_REANIMATED_001`).
+- Checks for `react-native-reanimated` in project dependencies.
+- Uses narrow text scanning to look for `react-native-reanimated/plugin` in `babel.config.js`.
+- Reports when the expected Babel setup cannot be found.
 
 ### Reports
 
 - Terminal report with project summary, detected files, lockfiles, and issues.
-- Static local HTML report with the same audit results.
+- Static local HTML report containing the same audit results.
+
+## HTML report
+
+```bash
+rn-auditor report --html /path/to/project --output report.html
+```
+
+The report is a static HTML file written locally. It does not require a server or upload project data. Without `--output`, the file is written as `rn-auditor-report.html` in the current directory.
 
 ## Security model
 
-React Native Auditor is local-first:
+React Native Auditor treats project configuration as untrusted input.
 
-- It does not upload project data.
-- It does not require a SaaS account or service.
-- It does not execute commands from the target project.
-- It does not run npm, Yarn, pnpm, or Bun.
-- It does not run Expo CLI, EAS CLI, or React Native CLI.
-- It does not evaluate `app.config.js` or `app.config.ts`.
-- It does not execute `babel.config.js`.
-- It does not print `.env` values.
-- It uses static JSON parsing and conservative text scanning.
+- Does not upload project data.
+- Does not require a SaaS account or service.
+- Does not execute commands from the target project.
+- Does not run npm, Yarn, pnpm, or Bun commands from the target project.
+- Does not run Expo CLI, EAS CLI, or React Native CLI.
+- Does not evaluate `app.config.js` or `app.config.ts`.
+- Does not execute `babel.config.js`.
+- Does not print `.env` values.
 
-JavaScript and TypeScript configuration files are treated as potentially executable input. v0.1 only detects their presence or scans narrowly for known text patterns where a rule requires it.
+Static JSON parsing and narrow text scanning are used where a rule needs file contents. JavaScript and TypeScript configuration files are never loaded as executable modules.
+
+## Installation
+
+React Native Auditor requires Node.js 18 or newer when installed through npm.
+
+### npx
+
+```bash
+npx react-native-auditor audit
+```
+
+### Global npm install
+
+```bash
+npm install -g react-native-auditor
+rn-auditor audit
+```
+
+### Other package runners
+
+The published package exposes the standard `rn-auditor` npm binary and can also be launched with:
+
+```bash
+yarn dlx react-native-auditor audit
+pnpm dlx react-native-auditor audit
+bunx react-native-auditor audit
+```
+
+The npm wrapper selects the bundled Rust binary for the current platform and forwards CLI arguments to it. The v0.1 package includes binaries for macOS arm64/x64, Linux x64, and Windows x64.
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `rn-auditor audit [path]` | Audit a project and print the terminal report. |
+| `rn-auditor scan [path]` | Alias for `audit`. |
+| `rn-auditor report --html [path] [--output <file>]` | Write a local static HTML report. |
+
+If no path is provided, the current directory is audited. The `--html` flag is required for the `report` command.
 
 ## Roadmap
 
-Near-term work will continue to add focused, high-value project rules and strengthen test coverage and reporting. Potential later commands include log analysis, release checks, and conservative interactive fixes.
+Planned work remains deliberately focused:
 
-The project does not plan to add a SaaS dashboard or plugin system for v1. See [docs/ROADMAP.md](docs/ROADMAP.md) for the current development plan.
+- More high-value static rules.
+- Stronger release-readiness checks.
+- Log analysis as a later capability.
+- Conservative, interactive fixes at a later stage.
+
+There is no plugin system planned for v1. Commands such as `analyze-log`, `release-check`, and interactive fixes are roadmap items, not v0.1 features. See [docs/ROADMAP.md](docs/ROADMAP.md) for current development notes.
 
 ## Contributing
 
-Small, focused rules are preferred over broad frameworks. Useful rule categories include:
+Contributions should prefer small, focused rules with clear findings. Checks must remain static-safe and must not execute code or commands from the target project.
 
-- Universal project rules.
-- React Native and Expo rules.
-- Pattern-based dependency rules.
-- Dedicated rules for popular, high-impact libraries.
-
-v1 intentionally avoids a plugin system. Keep changes reviewable, avoid executing target project code, and run the Rust checks before submitting:
+Before submitting a Rust change, run:
 
 ```bash
 cargo fmt --all -- --check
@@ -192,3 +219,7 @@ cargo check --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
+
+## License
+
+[MIT](LICENSE)

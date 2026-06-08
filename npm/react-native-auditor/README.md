@@ -1,109 +1,96 @@
-# React Native Auditor npm wrapper
+<div align="center">
 
-This directory contains the unpublished npm distribution wrapper for React Native Auditor.
-The JavaScript launcher selects the bundled Rust binary for the current platform and forwards
-all CLI arguments to it. It does not download binaries, run Cargo, build during npm install, or
-execute project scripts.
+# React Native Auditor
 
-Supported package layouts:
+**A local-first React Native & Expo project auditor for release readiness, dependency health, and risk reports.**
 
-- `vendor/darwin-arm64/rn-auditor`
-- `vendor/darwin-x64/rn-auditor`
-- `vendor/linux-x64/rn-auditor`
-- `vendor/win32-x64/rn-auditor.exe`
+Audit React Native and Expo projects before release issues waste your time.
 
-## Local packaging and testing
+[![npm version](https://img.shields.io/npm/v/react-native-auditor?style=flat-square)](https://www.npmjs.com/package/react-native-auditor)
+[![license](https://img.shields.io/npm/l/react-native-auditor?style=flat-square)](https://github.com/twinedo/react-native-auditor/blob/main/LICENSE)
+![platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-4c566a?style=flat-square)
 
-This workflow is for local package preparation and testing only. It does not publish the package
-to npm.
+</div>
 
-From the repository root, build the release binary:
+## Quick start
 
 ```bash
-cargo build -p react-native-auditor --release
+npx react-native-auditor audit
 ```
 
-Then prepare the current platform binary and run the launcher directly:
+Audit another project:
 
 ```bash
-cd npm/react-native-auditor
-node scripts/prepare-local-binary.js
-node bin/rn-auditor.js audit /path/to/project
+npx react-native-auditor audit /path/to/project
 ```
 
-The helper only copies the current platform's existing binary from `target/release`. It does not
-run `cargo build`, download anything, or publish anything. Generated vendor binaries and npm pack
-tarballs are local artifacts and should not be committed.
-
-## Prepare a package from GitHub Actions artifacts
-
-This workflow validates the complete multi-platform npm package before publishing. It does not
-publish to npm or create a GitHub Release.
-
-1. Run the GitHub Actions workflow named `Release Binaries`.
-2. Download these artifacts manually:
-   - `rn-auditor-darwin-arm64`
-   - `rn-auditor-darwin-x64`
-   - `rn-auditor-linux-x64`
-   - `rn-auditor-win32-x64`
-3. Extract the artifacts into a local folder, for example `dist-artifacts/` at the repository root.
-4. Prepare the npm vendor layout:
+Or install the CLI globally:
 
 ```bash
-cd npm/react-native-auditor
-node scripts/prepare-artifact-binaries.js ../../dist-artifacts
+npm install -g react-native-auditor
+rn-auditor audit
 ```
 
-## Final prepublish validation
+`rn-auditor scan` is an alias for `rn-auditor audit`.
 
-This is a manual prepublish validation workflow. It checks the package but does not publish it,
-create a GitHub Release, tag a release, or upload artifacts.
+## What it checks
 
-After preparing all four platform binaries with `prepare-artifact-binaries.js`, run:
+- React Native, Expo, and unknown project detection.
+- Package manager detection and conflicting lockfiles.
+- Missing `.env.example` documentation.
+- Static Expo app identity configuration.
+- EAS production profile readiness.
+- Common Reanimated and Babel setup risk.
+- Terminal and local static HTML reports.
+
+React Native Auditor complements `react-native doctor`: doctor-style tools check the development environment, while this CLI focuses on project-level files and release risks.
+
+## HTML report
 
 ```bash
-npm run check:package
-npm pack --dry-run
-npm pack
-npm install -g ./react-native-auditor-0.1.0.tgz
-rn-auditor audit ../../
-npm uninstall -g react-native-auditor
+rn-auditor report --html
+rn-auditor report --html /path/to/project --output report.html
 ```
 
-`npm run check:package` is an alias for `node scripts/check-package.js`. The checker validates the
-package metadata, launcher permissions and shebang, required platform binaries, and the JSON output
-from `npm pack --dry-run`. It fails if required runtime files would be omitted or if local scripts,
-tarballs, `dist-artifacts`, `target`, or `.local` content would be included.
+Without `--output`, the report is written to `rn-auditor-report.html` in the current directory.
 
-The published tarball is intentionally limited by the exact `package.json` allowlist to:
+## Commands
 
-- `bin/rn-auditor.js`
-- `bin/platform.js`
-- the four supported binaries under `vendor/`
-- `README.md`
-- `package.json`
+| Command | Description |
+| --- | --- |
+| `rn-auditor audit [path]` | Audit a project and print the terminal report. |
+| `rn-auditor scan [path]` | Alias for `audit`. |
+| `rn-auditor report --html [path] [--output <file>]` | Write a local static HTML report. |
 
-The local `scripts/` directory remains in the repository for package preparation and validation,
-but is not included in the tarball.
+## Native binary distribution
 
-To test the generated tarball manually:
+This npm package is a small JavaScript launcher around the native React Native Auditor CLI, written in Rust. It selects the bundled binary for the current platform and forwards the CLI arguments.
+
+The package does not download a binary during installation and does not build Rust code on the user's machine. v0.1 includes macOS arm64/x64, Linux x64, and Windows x64 binaries. Node.js 18 or newer is required by the npm wrapper.
+
+The package can also be launched through other npm-compatible package runners:
 
 ```bash
-npm install -g ./react-native-auditor-0.1.0.tgz
-rn-auditor audit /path/to/project
-npm uninstall -g react-native-auditor
+yarn dlx react-native-auditor audit
+pnpm dlx react-native-auditor audit
+bunx react-native-auditor audit
 ```
 
-The artifact helper accepts common extracted layouts such as:
+## Security
 
-- `<artifacts-root>/rn-auditor-darwin-arm64/rn-auditor`
-- `<artifacts-root>/rn-auditor-darwin-arm64/darwin-arm64/rn-auditor`
-- `<artifacts-root>/darwin-arm64/rn-auditor`
+React Native Auditor is local-first and uses conservative static checks:
 
-It requires all four platform binaries before copying any of them. It only copies the expected
-binary files into `vendor/` and marks the macOS and Linux binaries executable. It does not access
-the network, build Rust, run Cargo, publish to npm, create a GitHub Release, or execute code from a
-target React Native project.
+- Does not upload project data or require a SaaS service.
+- Does not execute target project commands.
+- Does not run npm, Yarn, pnpm, Bun, Expo CLI, EAS CLI, or React Native CLI.
+- Does not evaluate `app.config.js` or `app.config.ts`.
+- Does not execute `babel.config.js`.
+- Does not print `.env` values.
 
-The extracted `dist-artifacts/` folder, generated vendor binaries, and npm tarballs are local
-pre-publish validation artifacts and should not be committed.
+## Documentation
+
+See the [GitHub repository](https://github.com/twinedo/react-native-auditor) for the full rule list, roadmap, security model, and contributing guide.
+
+## License
+
+[MIT](https://github.com/twinedo/react-native-auditor/blob/main/LICENSE)
