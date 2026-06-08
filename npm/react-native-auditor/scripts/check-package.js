@@ -10,7 +10,7 @@ const { spawnSync } = require("node:child_process");
 const packageRoot = path.resolve(__dirname, "..");
 const packageJsonPath = path.join(packageRoot, "package.json");
 
-const requiredPackageFiles = [
+const publishedPackageFiles = [
   "package.json",
   "README.md",
   "bin/rn-auditor.js",
@@ -21,7 +21,7 @@ const requiredPackageFiles = [
   "vendor/win32-x64/rn-auditor.exe",
 ];
 
-const requiredFilesEntries = ["bin", "vendor", "README.md", "package.json"];
+const requiredFilesEntries = [...publishedPackageFiles];
 
 const forbiddenTarballPaths = [
   ".gitignore",
@@ -51,11 +51,14 @@ function isFile(relativePath) {
 }
 
 function validateRequiredFiles() {
-  for (const relativePath of requiredPackageFiles) {
+  for (const relativePath of publishedPackageFiles) {
     if (isFile(relativePath)) {
       pass(`Required file exists: ${relativePath}`);
     } else {
-      fail(`Required file is missing: ${relativePath}`);
+      const preparationHint = relativePath.startsWith("vendor/")
+        ? " Prepare all release artifact binaries with scripts/prepare-artifact-binaries.js first."
+        : "";
+      fail(`Required file is missing: ${relativePath}.${preparationHint}`);
     }
   }
 }
@@ -105,12 +108,24 @@ function validatePackageJson(packageJson) {
       "package.json name is react-native-auditor",
     ],
     [packageJson.version === "0.1.0", "package.json version is 0.1.0"],
+    [packageJson.license === "MIT", "package.json license is MIT"],
+    [
+      typeof packageJson.repository === "string"
+        ? packageJson.repository.length > 0
+        : typeof packageJson.repository?.url === "string"
+          && packageJson.repository.url.length > 0,
+      "package.json repository exists",
+    ],
     [
       packageJson.bin?.["rn-auditor"] === "bin/rn-auditor.js",
       "package.json bin.rn-auditor points to bin/rn-auditor.js",
     ],
     [packageJson.private !== true, "package.json private is not true"],
     [Array.isArray(packageJson.files), "package.json files is an array"],
+    [
+      packageJson.scripts?.["check:package"] === "node scripts/check-package.js",
+      "package.json check:package runs scripts/check-package.js",
+    ],
   ];
 
   for (const [condition, message] of checks) {
@@ -125,15 +140,44 @@ function validatePackageJson(packageJson) {
     return;
   }
 
-  for (const entry of requiredFilesEntries) {
-    if (packageJson.files.includes(entry)) {
-      pass(`package.json files includes ${entry}`);
+  const normalizedFiles = packageJson.files.map((entry) =>
+    typeof entry === "string"
+      ? entry.replaceAll("\\", "/").replace(/\/+$/, "")
+      : entry
+  );
+  const missingEntries = requiredFilesEntries.filter(
+    (entry) => !normalizedFiles.includes(entry),
+  );
+  const extraEntries = normalizedFiles.filter(
+    (entry) => !requiredFilesEntries.includes(entry),
+  );
+
+  for (const entry of missingEntries) {
+    fail(`package.json files must include ${entry}`);
+  }
+
+  for (const entry of extraEntries) {
+    fail(`package.json files must not include unnecessary entry: ${String(entry)}`);
+  }
+
+  if (missingEntries.length === 0 && extraEntries.length === 0) {
+    pass("package.json files contains only required publish files");
+  }
+
+  for (const lifecycleScript of ["install", "postinstall", "prepare"]) {
+    if (Object.prototype.hasOwnProperty.call(
+      packageJson.scripts ?? {},
+      lifecycleScript,
+    )) {
+      fail(`package.json must not define a ${lifecycleScript} lifecycle script`);
     } else {
-      fail(`package.json files must include ${entry}`);
+      pass(`package.json has no ${lifecycleScript} lifecycle script`);
     }
   }
 
-  if (packageJson.files.includes("scripts")) {
+  if (normalizedFiles.some(
+    (entry) => entry === "scripts" || entry.startsWith("scripts/"),
+  )) {
     fail("package.json files must not include local packaging scripts");
   } else {
     pass("package.json files excludes local packaging scripts");
@@ -215,7 +259,7 @@ function validateTarballContents() {
     packResult.files.map((file) => file.path.replaceAll("\\", "/")),
   );
 
-  for (const relativePath of requiredPackageFiles) {
+  for (const relativePath of publishedPackageFiles) {
     if (tarballFiles.has(relativePath)) {
       pass(`Tarball includes ${relativePath}`);
     } else {
@@ -230,6 +274,18 @@ function validateTarballContents() {
   } else {
     for (const relativePath of forbiddenFiles) {
       fail(`Tarball would include forbidden file: ${relativePath}`);
+    }
+  }
+
+  const unexpectedFiles = [...tarballFiles].filter(
+    (relativePath) => !publishedPackageFiles.includes(relativePath),
+  );
+
+  if (unexpectedFiles.length === 0) {
+    pass("Tarball contains only required runtime files");
+  } else {
+    for (const relativePath of unexpectedFiles) {
+      fail(`Tarball would include unexpected file: ${relativePath}`);
     }
   }
 }

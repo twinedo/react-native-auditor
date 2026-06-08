@@ -62,7 +62,7 @@ create a GitHub Release, tag a release, or upload artifacts.
 After preparing all four platform binaries with `prepare-artifact-binaries.js`, run:
 
 ```bash
-node scripts/check-package.js
+npm run check:package
 npm pack --dry-run
 npm pack
 npm install -g ./react-native-auditor-0.1.0.tgz
@@ -75,10 +75,11 @@ package metadata, launcher permissions and shebang, required platform binaries, 
 from `npm pack --dry-run`. It fails if required runtime files would be omitted or if local scripts,
 tarballs, `dist-artifacts`, `target`, or `.local` content would be included.
 
-The published tarball is intentionally limited by `package.json` to:
+The published tarball is intentionally limited by the exact `package.json` allowlist to:
 
-- `bin/`
-- `vendor/`
+- `bin/rn-auditor.js`
+- `bin/platform.js`
+- the four supported binaries under `vendor/`
 - `README.md`
 - `package.json`
 

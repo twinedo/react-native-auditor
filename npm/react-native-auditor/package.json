@@ -14,8 +14,12 @@
     "check:package": "node scripts/check-package.js"
   },
   "files": [
-    "bin",
-    "vendor",
+    "bin/rn-auditor.js",
+    "bin/platform.js",
+    "vendor/darwin-arm64/rn-auditor",
+    "vendor/darwin-x64/rn-auditor",
+    "vendor/linux-x64/rn-auditor",
+    "vendor/win32-x64/rn-auditor.exe",
     "README.md",
     "package.json"
   ],
