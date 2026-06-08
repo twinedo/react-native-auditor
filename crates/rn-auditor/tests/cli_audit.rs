@@ -5,7 +5,10 @@ use std::path::Path;
 use tempfile::{NamedTempFile, TempDir};
 
 fn rn_auditor() -> Command {
-    Command::cargo_bin("rn-auditor").expect("rn-auditor binary should be available")
+    let mut command =
+        Command::cargo_bin("rn-auditor").expect("rn-auditor binary should be available");
+    command.env("NO_COLOR", "1");
+    command
 }
 
 fn temp_project() -> TempDir {
@@ -45,6 +48,19 @@ fn scan_succeeds_for_valid_temp_project_path() {
         .assert()
         .success()
         .stdout(predicate::str::contains("React Native Auditor"));
+}
+
+#[test]
+fn no_color_disables_ansi_escape_codes() {
+    let project = temp_project();
+
+    rn_auditor()
+        .env("CLICOLOR_FORCE", "1")
+        .arg("audit")
+        .arg(project.path())
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\u{1b}[").not());
 }
 
 #[test]
