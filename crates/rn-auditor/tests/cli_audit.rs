@@ -177,6 +177,51 @@ fn report_writes_to_custom_output_path() {
 }
 
 #[test]
+fn json_report_prints_pretty_json_to_stdout() {
+    let project = temp_project();
+    fs::write(project.path().join("yarn.lock"), "").expect("yarn.lock should be written");
+
+    let output = rn_auditor()
+        .arg("report")
+        .arg("--json")
+        .arg(project.path())
+        .output()
+        .expect("JSON report command should run");
+
+    assert!(output.status.success());
+    let report: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("stdout should contain valid JSON");
+    assert_eq!(report["tool"], "React Native Auditor");
+    assert_eq!(report["detected"]["files"]["package_json"], true);
+    assert_eq!(report["detected"]["lockfiles"][0], "yarn.lock");
+    assert!(report["summary"]["issues"]["info"].is_number());
+    assert!(report["summary"]["issues"]["warnings"].is_number());
+    assert!(report["summary"]["issues"]["errors"].is_number());
+}
+
+#[test]
+fn json_report_writes_to_custom_output_path() {
+    let project = temp_project();
+    let output_dir = tempfile::tempdir().expect("output directory should be created");
+    let output_path = output_dir.path().join("custom-report.json");
+
+    rn_auditor()
+        .arg("report")
+        .arg("--json")
+        .arg(project.path())
+        .arg("--output")
+        .arg(&output_path)
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("JSON report written to:"));
+
+    let json = fs::read_to_string(output_path).expect("custom JSON report should be readable");
+    let report: serde_json::Value =
+        serde_json::from_str(&json).expect("custom report should contain valid JSON");
+    assert_eq!(report["tool"], "React Native Auditor");
+}
+
+#[test]
 fn report_fails_for_invalid_project_path() {
     let project = tempfile::tempdir().expect("temp directory should be created");
     let missing_path = project.path().join("does-not-exist");
@@ -191,10 +236,11 @@ fn report_fails_for_invalid_project_path() {
 }
 
 #[test]
-fn report_requires_html_flag() {
+fn report_requires_format_flag() {
     rn_auditor()
         .arg("report")
         .assert()
         .failure()
-        .stderr(predicate::str::contains("--html"));
+        .stderr(predicate::str::contains("--html"))
+        .stderr(predicate::str::contains("--json"));
 }

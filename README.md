@@ -10,7 +10,9 @@ Audit React Native and Expo projects before release issues waste your time.
 [![CI](https://img.shields.io/github/actions/workflow/status/twinedo/react-native-auditor/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/twinedo/react-native-auditor/actions/workflows/ci.yml)
 [![license](https://img.shields.io/github/license/twinedo/react-native-auditor?style=flat-square)](LICENSE)
 ![platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-4c566a?style=flat-square)
-
+<a href="https://www.npmjs.com/package/react-native-auditor">
+    <img src="https://img.shields.io/npm/dm/react-native-auditor.svg" alt="npm downloads" />
+  </a>
 </div>
 
 ## Quick start
@@ -45,6 +47,14 @@ Generate a local HTML report:
 ```bash
 rn-auditor report --html
 rn-auditor report --html /path/to/project --output report.html
+```
+
+Generate a JSON report for CI or other tooling:
+
+```bash
+rn-auditor report --json
+rn-auditor report --json --output rn-auditor-report.json
+rn-auditor report --json /path/to/project
 ```
 
 ## What it does
@@ -133,6 +143,7 @@ Dynamic app config limits the static checks that can be performed.
 
 - Terminal report with project summary, detected files, lockfiles, and issues.
 - Static local HTML report containing the same audit results.
+- Pretty-printed JSON report with detected files, lockfiles, issue counts by severity, and the full issue list.
 
 ## HTML report
 
@@ -141,6 +152,16 @@ rn-auditor report --html /path/to/project --output report.html
 ```
 
 The report is a static HTML file written locally. It does not require a server or upload project data. Without `--output`, the file is written as `rn-auditor-report.html` in the current directory.
+
+## JSON report
+
+```bash
+rn-auditor report --json
+rn-auditor report --json --output rn-auditor-report.json
+rn-auditor report --json /path/to/project
+```
+
+Without `--output`, the pretty-printed JSON report is written to standard output. The report includes detected files, lockfiles, issue counts by severity, and the full issue list.
 
 ## Security model
 
@@ -193,8 +214,9 @@ The npm wrapper selects the bundled Rust binary for the current platform and for
 | `rn-auditor audit [path]` | Audit a project and print the terminal report. |
 | `rn-auditor scan [path]` | Alias for `audit`. |
 | `rn-auditor report --html [path] [--output <file>]` | Write a local static HTML report. |
+| `rn-auditor report --json [path] [--output <file>]` | Print or write a pretty-printed JSON report. |
 
-If no path is provided, the current directory is audited. The `--html` flag is required for the `report` command.
+If no path is provided, the current directory is audited. Exactly one of `--html` or `--json` is required for the `report` command.
 
 ## Roadmap
 

@@ -4,8 +4,8 @@ mod reporters;
 mod rules;
 mod scanner;
 
-use clap::{Parser, Subcommand};
-use reporters::{print_terminal_report, write_html_report};
+use clap::{ArgGroup, Parser, Subcommand};
+use reporters::{print_terminal_report, render_json_report, write_html_report, write_json_report};
 use scanner::ProjectScan;
 use std::{env, path::PathBuf, process};
 
@@ -29,9 +29,17 @@ enum Commands {
     Scan {
         path: Option<PathBuf>,
     },
+    #[command(group(
+        ArgGroup::new("format")
+            .required(true)
+            .multiple(false)
+            .args(["html", "json"])
+    ))]
     Report {
-        #[arg(long, required = true)]
+        #[arg(long)]
         html: bool,
+        #[arg(long)]
+        json: bool,
         path: Option<PathBuf>,
         #[arg(long)]
         output: Option<PathBuf>,
@@ -44,10 +52,17 @@ fn main() {
     let result = match cli.command {
         Commands::Audit { path } | Commands::Scan { path } => run_audit(path),
         Commands::Report {
-            html: _,
+            html,
+            json: _,
             path,
             output,
-        } => run_html_report(path, output),
+        } => {
+            if html {
+                run_html_report(path, output)
+            } else {
+                run_json_report(path, output)
+            }
+        }
     };
 
     if let Err(error) = result {
@@ -68,13 +83,31 @@ fn run_audit(path: Option<PathBuf>) -> Result<(), String> {
 
 fn run_html_report(path: Option<PathBuf>, output: Option<PathBuf>) -> Result<(), String> {
     let project_path = resolve_project_path(path)?;
-    let output_path = resolve_output_path(output)?;
+    let output_path = resolve_output_path(output, "rn-auditor-report.html")?;
 
     let scan = ProjectScan::scan(&project_path);
     let issues = scan.issues();
 
     write_html_report(&scan, &issues, &output_path)?;
     println!("HTML report written to: {}", output_path.display());
+
+    Ok(())
+}
+
+fn run_json_report(path: Option<PathBuf>, output: Option<PathBuf>) -> Result<(), String> {
+    let project_path = resolve_project_path(path)?
+        .canonicalize()
+        .map_err(|error| format!("Failed to resolve project path: {error}"))?;
+    let scan = ProjectScan::scan(&project_path);
+    let issues = scan.issues();
+
+    if let Some(output) = output {
+        let output_path = resolve_output_path(Some(output), "rn-auditor-report.json")?;
+        write_json_report(&scan, &issues, &output_path)?;
+        println!("JSON report written to: {}", output_path.display());
+    } else {
+        print!("{}", render_json_report(&scan, &issues)?);
+    }
 
     Ok(())
 }
@@ -100,13 +133,13 @@ fn resolve_project_path(path: Option<PathBuf>) -> Result<PathBuf, String> {
     Ok(project_path)
 }
 
-fn resolve_output_path(output: Option<PathBuf>) -> Result<PathBuf, String> {
+fn resolve_output_path(output: Option<PathBuf>, default_name: &str) -> Result<PathBuf, String> {
     let current_dir =
         env::current_dir().map_err(|error| format!("Failed to read current directory: {error}"))?;
 
     Ok(match output {
         Some(path) if path.is_absolute() => path,
         Some(path) => current_dir.join(path),
-        None => current_dir.join("rn-auditor-report.html"),
+        None => current_dir.join(default_name),
     })
 }
