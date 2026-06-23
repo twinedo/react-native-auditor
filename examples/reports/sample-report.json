@@ -1,0 +1,73 @@
+{
+  "tool": "React Native Auditor",
+  "version": "0.2.0",
+  "root": "/work/mobile-app",
+  "summary": {
+    "issues": {
+      "info": 0,
+      "warnings": 6,
+      "errors": 0
+    }
+  },
+  "detected": {
+    "files": {
+      "package_json": true,
+      "app_json": true,
+      "app_config_js": false,
+      "app_config_ts": false,
+      "eas_json": true,
+      "env": true,
+      "env_example": false,
+      "babel_config_js": true,
+      "metro_config_js": true
+    },
+    "lockfiles": [
+      "yarn.lock",
+      "package-lock.json"
+    ]
+  },
+  "issues": [
+    {
+      "code": "RNA_LOCKFILE_001",
+      "severity": "warning",
+      "title": "Multiple lockfiles detected",
+      "message": "Multiple package manager lockfiles were found. This can cause dependency installs to differ between local machines and CI.",
+      "file": null
+    },
+    {
+      "code": "RNA_ENV_001",
+      "severity": "warning",
+      "title": "Missing .env.example",
+      "message": "This project uses a .env file but does not provide a .env.example file to document required environment variables.",
+      "file": "/work/mobile-app/.env.example"
+    },
+    {
+      "code": "RNA_REANIMATED_001",
+      "severity": "warning",
+      "title": "Missing Reanimated Babel plugin",
+      "message": "react-native-reanimated usually requires the Babel plugin react-native-reanimated/plugin so React Native and Reanimated setup works correctly.",
+      "file": "/work/mobile-app/babel.config.js"
+    },
+    {
+      "code": "RNA_EXPO_IOS_001",
+      "severity": "warning",
+      "title": "Missing iOS bundle identifier",
+      "message": "expo.ios.bundleIdentifier is missing or empty. This field is important for iOS release and build identity.",
+      "file": "/work/mobile-app/app.json"
+    },
+    {
+      "code": "RNA_EXPO_ANDROID_001",
+      "severity": "warning",
+      "title": "Missing Android package name",
+      "message": "expo.android.package is missing or empty. This field is important for Android release and build identity.",
+      "file": "/work/mobile-app/app.json"
+    },
+    {
+      "code": "RNA_EAS_002",
+      "severity": "warning",
+      "title": "Missing EAS production build profile",
+      "message": "build.production is important for release readiness and keeping CI and release builds consistent.",
+      "file": "/work/mobile-app/eas.json"
+    }
+  ]
+}

@@ -163,6 +163,49 @@ rn-auditor report --json /path/to/project
 
 Without `--output`, the pretty-printed JSON report is written to standard output. The report includes detected files, lockfiles, issue counts by severity, and the full issue list.
 
+### GitHub Actions
+
+Use the JSON report in CI when you want a machine-readable audit artifact:
+
+```yaml
+name: React Native Auditor
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run React Native Auditor
+        run: npx react-native-auditor@latest report --json --output rn-auditor-report.json
+
+      - name: Upload JSON report
+        uses: actions/upload-artifact@v4
+        with:
+          name: rn-auditor-json-report
+          path: rn-auditor-report.json
+```
+
+You can also upload the optional HTML report for easier manual review:
+
+```yaml
+      - name: Generate HTML report
+        run: npx react-native-auditor@latest report --html --output rn-auditor-report.html
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: rn-auditor-html-report
+          path: rn-auditor-report.html
+```
+
+See [examples/reports/sample-report.json](examples/reports/sample-report.json) for a sample JSON report.
+
 ## Security model
 
 React Native Auditor treats project configuration as untrusted input.
