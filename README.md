@@ -57,6 +57,51 @@ rn-auditor report --json --output rn-auditor-report.json
 rn-auditor report --json /path/to/project
 ```
 
+## CI quality gates
+
+Use `--fail-on <info|warning|error|none>` when CI should fail based on reported issue severity:
+
+```bash
+rn-auditor audit --fail-on error
+rn-auditor audit --fail-on warning
+rn-auditor audit --fail-on info
+rn-auditor audit --fail-on none
+rn-auditor scan --fail-on error
+rn-auditor report --json --fail-on error
+rn-auditor report --html --fail-on error
+```
+
+Threshold behavior:
+
+- `error` fails when at least one Error issue is reported.
+- `warning` fails when at least one Warning or Error issue is reported.
+- `info` fails when any Info, Warning, or Error issue is reported.
+- `none` never fails because of reported issues.
+
+If `--fail-on` is omitted, React Native Auditor keeps its default exit behavior.
+
+Example GitHub Actions workflow:
+
+```yaml
+name: React Native Auditor
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run React Native Auditor
+        run: npx react-native-auditor audit --fail-on warning
+```
+
 ## What it does
 
 React Native Auditor uses conservative static checks to:
@@ -254,10 +299,10 @@ The npm wrapper selects the bundled Rust binary for the current platform and for
 
 | Command | Description |
 | --- | --- |
-| `rn-auditor audit [path]` | Audit a project and print the terminal report. |
-| `rn-auditor scan [path]` | Alias for `audit`. |
-| `rn-auditor report --html [path] [--output <file>]` | Write a local static HTML report. |
-| `rn-auditor report --json [path] [--output <file>]` | Print or write a pretty-printed JSON report. |
+| `rn-auditor audit [path] [--fail-on <level>]` | Audit a project and print the terminal report. |
+| `rn-auditor scan [path] [--fail-on <level>]` | Alias for `audit`. |
+| `rn-auditor report --html [path] [--output <file>] [--fail-on <level>]` | Write a local static HTML report. |
+| `rn-auditor report --json [path] [--output <file>] [--fail-on <level>]` | Print or write a pretty-printed JSON report. |
 
 If no path is provided, the current directory is audited. Exactly one of `--html` or `--json` is required for the `report` command.
 

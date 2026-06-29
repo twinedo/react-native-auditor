@@ -1,13 +1,15 @@
 mod issue;
 mod parsers;
+mod quality_gate;
 mod reporters;
 mod rules;
 mod scanner;
 
 use clap::{ArgGroup, Parser, Subcommand};
+use quality_gate::{should_fail, FailOn};
 use reporters::{print_terminal_report, render_json_report, write_html_report, write_json_report};
 use scanner::ProjectScan;
-use std::{env, path::PathBuf, process};
+use std::{env, path::PathBuf, process::ExitCode};
 
 #[derive(Parser, Debug)]
 #[command(name = "rn-auditor")]
@@ -25,9 +27,13 @@ struct Cli {
 enum Commands {
     Audit {
         path: Option<PathBuf>,
+        #[arg(long, value_enum)]
+        fail_on: Option<FailOn>,
     },
     Scan {
         path: Option<PathBuf>,
+        #[arg(long, value_enum)]
+        fail_on: Option<FailOn>,
     },
     #[command(group(
         ArgGroup::new("format")
@@ -43,34 +49,43 @@ enum Commands {
         path: Option<PathBuf>,
         #[arg(long)]
         output: Option<PathBuf>,
+        #[arg(long, value_enum)]
+        fail_on: Option<FailOn>,
     },
 }
 
-fn main() {
+fn main() -> ExitCode {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Audit { path } | Commands::Scan { path } => run_audit(path),
+        Commands::Audit { path, fail_on } | Commands::Scan { path, fail_on } => {
+            run_audit(path, fail_on)
+        }
         Commands::Report {
             html,
             json: _,
             path,
             output,
+            fail_on,
         } => {
             if html {
-                run_html_report(path, output)
+                run_html_report(path, output, fail_on)
             } else {
-                run_json_report(path, output)
+                run_json_report(path, output, fail_on)
             }
         }
     };
 
-    if let Err(error) = result {
-        eprintln!("Error: {error}");
-        process::exit(1);
+    match result {
+        Ok(true) => ExitCode::FAILURE,
+        Ok(false) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("Error: {error}");
+            ExitCode::FAILURE
+        }
     }
 }
-fn run_audit(path: Option<PathBuf>) -> Result<(), String> {
+fn run_audit(path: Option<PathBuf>, fail_on: Option<FailOn>) -> Result<bool, String> {
     let project_path = resolve_project_path(path)?;
 
     let scan = ProjectScan::scan(&project_path);
@@ -78,10 +93,14 @@ fn run_audit(path: Option<PathBuf>) -> Result<(), String> {
 
     print_terminal_report(&scan, &issues);
 
-    Ok(())
+    Ok(should_fail(&issues, fail_on))
 }
 
-fn run_html_report(path: Option<PathBuf>, output: Option<PathBuf>) -> Result<(), String> {
+fn run_html_report(
+    path: Option<PathBuf>,
+    output: Option<PathBuf>,
+    fail_on: Option<FailOn>,
+) -> Result<bool, String> {
     let project_path = resolve_project_path(path)?;
     let output_path = resolve_output_path(output, "rn-auditor-report.html")?;
 
@@ -91,10 +110,14 @@ fn run_html_report(path: Option<PathBuf>, output: Option<PathBuf>) -> Result<(),
     write_html_report(&scan, &issues, &output_path)?;
     println!("HTML report written to: {}", output_path.display());
 
-    Ok(())
+    Ok(should_fail(&issues, fail_on))
 }
 
-fn run_json_report(path: Option<PathBuf>, output: Option<PathBuf>) -> Result<(), String> {
+fn run_json_report(
+    path: Option<PathBuf>,
+    output: Option<PathBuf>,
+    fail_on: Option<FailOn>,
+) -> Result<bool, String> {
     let project_path = resolve_project_path(path)?
         .canonicalize()
         .map_err(|error| format!("Failed to resolve project path: {error}"))?;
@@ -109,7 +132,7 @@ fn run_json_report(path: Option<PathBuf>, output: Option<PathBuf>) -> Result<(),
         print!("{}", render_json_report(&scan, &issues)?);
     }
 
-    Ok(())
+    Ok(should_fail(&issues, fail_on))
 }
 
 fn resolve_project_path(path: Option<PathBuf>) -> Result<PathBuf, String> {
