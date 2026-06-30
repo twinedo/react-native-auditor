@@ -13,3 +13,5 @@ npm/react-native-auditor/vendor/**
 !npm/react-native-auditor/vendor/**/
 !npm/react-native-auditor/vendor/**/.gitkeep
 npm/react-native-auditor/*.tgz
+rn-auditor-report.html
+rn-auditor-report.json

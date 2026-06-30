@@ -167,7 +167,10 @@ Output varies by project. This example is shortened for readability.
 ### Expo app config
 
 - Parses static `app.json` as JSON.
-- Checks `expo.ios.bundleIdentifier` and `expo.android.package`.
+- Checks release metadata: `expo.name`, `expo.slug`, `expo.version`,
+  `expo.ios.buildNumber`, and `expo.android.versionCode`.
+- Checks release identities: `expo.ios.bundleIdentifier` and
+  `expo.android.package`.
 - Detects dynamic `app.config.js` and `app.config.ts` without evaluating them.
 
 Dynamic app config limits the static checks that can be performed.
@@ -177,6 +180,7 @@ Dynamic app config limits the static checks that can be performed.
 - Parses static `eas.json` as JSON.
 - Reports a missing `eas.json` for Expo projects.
 - Reports a missing `build.production` profile.
+- Reports an empty `build.production` profile for review before release.
 
 ### Reanimated setup
 

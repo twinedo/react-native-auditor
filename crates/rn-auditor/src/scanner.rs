@@ -4,7 +4,7 @@ use crate::issue::{Issue, Severity};
 use crate::parsers::app_json::AppJson;
 use crate::parsers::eas_json::EasJson;
 use crate::parsers::package_json::{PackageJson, ProjectType};
-use crate::rules::{app_config, eas, env, lockfiles, reanimated};
+use crate::rules::{app_config, eas, env, expo_release, lockfiles, reanimated};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PackageManager {
@@ -210,6 +210,8 @@ impl ProjectScan {
 
         if matches!(self.project_type, ProjectType::Expo) {
             if let Some(app_json) = &self.app_json {
+                issues.extend(expo_release::release_metadata_issues(&self.root, app_json));
+
                 if is_missing_string(app_json.ios_bundle_identifier()) {
                     issues.push(Issue::new(
                         "RNA_EXPO_IOS_001",

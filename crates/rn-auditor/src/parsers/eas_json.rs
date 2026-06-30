@@ -28,4 +28,10 @@ impl EasJson {
             .as_ref()
             .and_then(|build| build.production.as_ref())
     }
+
+    pub fn production_profile_is_empty_object(&self) -> bool {
+        self.build_production()
+            .and_then(|production| production.as_object())
+            .is_some_and(|production| production.is_empty())
+    }
 }
