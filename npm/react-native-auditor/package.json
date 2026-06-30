@@ -1,6 +1,6 @@
 {
   "name": "react-native-auditor",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A local-first React Native & Expo project auditor for release readiness, dependency health, and risk reports.",
   "license": "MIT",
   "repository": {
